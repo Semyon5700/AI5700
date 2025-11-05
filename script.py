@@ -227,8 +227,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 /start - показать это сообщение
 /suggest - предложить улучшение для нейросети
-/prompt - выполнить специальный запрос
-
 💡 Просто напиши мне любой вопрос или сообщение, и я постараюсь помочь!
 Удачи в использовании!"""
 
@@ -299,7 +297,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if context.args[0] == "Password":
+    if context.args[0] == "password":
         admin_users.add(user_id)
         await update.message.reply_text(
             "✅ Доступ предоставлен!\n\n"
@@ -413,17 +411,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Данные экспортированы в файл!")
 
 
-# Команда /prompt
-async def custom_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text(
-            "🎯 Кастомный промт\n\n"
-            "Использование: /prompt ваш запрос\n\n"
-            "Пример: /prompt напиши план развития бизнеса"
-        )
-        return
-
-    user_prompt = ' '.join(context.args)
 
     # Теперь ответы берутся из базы знаний
     answer = nn.find_answer(user_prompt)
@@ -436,14 +423,13 @@ async def custom_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Основная функция
 def main():
-    TOKEN = "token"
+    TOKEN = "Введите сюда токен своего бота"
 
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("suggest", suggest_improvement))
     application.add_handler(CommandHandler("admin", admin_panel))
-    application.add_handler(CommandHandler("prompt", custom_prompt))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("🤖 Умный бот запущен...")
