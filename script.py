@@ -12,8 +12,10 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Файл для хранения данных
+# Файлы для хранения данных
 DATA_FILE = "bot_data.json"
+USERS_FILE = "users.txt"
+SENDS_FILE = "sends.txt"
 
 # 12 промтов для классификации
 PROMPTS = [
@@ -38,32 +40,27 @@ class AdvancedNeuralNetwork:
         self.bias = np.zeros(len(PROMPTS))
         self.knowledge_base = self.load_knowledge()
         self.conversation_history = []
-        self.training_suggestions = []  # Предложения по улучшению
+        self.training_suggestions = []
         self.pre_train()
 
     def load_knowledge(self):
-        """Загружаем базу знаний - теперь пустая"""
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         else:
-            # Возвращаем полностью пустую базу знаний
             return {}
 
     def save_knowledge(self, knowledge=None):
-        """Сохраняем базу знаний"""
         if knowledge is None:
             knowledge = self.knowledge_base
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(knowledge, f, ensure_ascii=False, indent=2)
 
     def add_knowledge(self, question, answer):
-        """Добавляем новое знание"""
         self.knowledge_base[question.lower()] = answer
         self.save_knowledge()
 
     def pre_train(self):
-        """Предварительное обучение на базовых примерах"""
         training_examples = [
             ("привет", "другое"),
             ("здравствуйте", "другое"),
@@ -72,21 +69,17 @@ class AdvancedNeuralNetwork:
             ("hello", "другое"),
             ("как дела", "другое"),
             ("что делаешь", "другое"),
-
             ("не работает", "техническая поддержка"),
             ("ошибка", "техническая поддержка"),
             ("помогите настроить", "техническая поддержка"),
             ("сломалось", "техническая поддержка"),
-
             ("купить", "продажи и маркетинг"),
             ("цена", "продажи и маркетинг"),
             ("стоимость", "продажи и маркетинг"),
             ("заказать", "продажи и маркетинг"),
-
             ("как работает", "информационные запросы"),
             ("что это", "информационные запросы"),
             ("расскажите о", "информационные запросы"),
-
             ("жалоба", "жалобы и предложения"),
             ("недоволен", "жалобы и предложения"),
             ("предложение", "жалобы и предложения"),
@@ -97,7 +90,6 @@ class AdvancedNeuralNetwork:
                 self.train_on_example(text, category, learning_rate=0.3)
 
     def preprocess_text(self, text):
-        """Преобразуем текст в числовой вектор"""
         text = text.lower()
         vector = np.zeros(100)
         words = text.split()
@@ -112,7 +104,6 @@ class AdvancedNeuralNetwork:
         return vector
 
     def predict(self, text):
-        """Предсказываем категорию текста"""
         vector = self.preprocess_text(text)
         scores = np.dot(self.weights, vector) + self.bias
 
@@ -131,7 +122,6 @@ class AdvancedNeuralNetwork:
         return results
 
     def train_on_example(self, text, correct_category, learning_rate=0.1):
-        """Простое обучение на одном примере"""
         vector = self.preprocess_text(text)
         scores = np.dot(self.weights, vector) + self.bias
 
@@ -146,14 +136,11 @@ class AdvancedNeuralNetwork:
                 self.bias[i] -= learning_rate * 0.1
 
     def find_answer(self, question):
-        """Ищем ответ в базе знаний"""
         question_lower = question.lower()
 
-        # Проверяем точное совпадение
         if question_lower in self.knowledge_base:
             return self.knowledge_base[question_lower]
 
-        # Проверяем частичные совпадения
         for key, answer in self.knowledge_base.items():
             if key in question_lower or question_lower in key:
                 return answer
@@ -161,7 +148,6 @@ class AdvancedNeuralNetwork:
         return None
 
     def generate_response(self, user_message, user_id, username):
-        """Генерируем интеллектуальный ответ"""
         # Сохраняем в историю
         self.conversation_history.append({
             'user_id': user_id,
@@ -207,6 +193,72 @@ class AdvancedNeuralNetwork:
                              "Интересный вопрос! Пока у меня нет информации об этом. Админ может добавить ответ через админ-панель.")
 
 
+# Функции для работы с пользователями и логами
+def save_user(user_id, username):
+    """Сохраняет пользователя в файл users.txt"""
+    try:
+        # Читаем существующих пользователей
+        if os.path.exists(USERS_FILE):
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                existing_users = set(line.strip() for line in f.readlines())
+        else:
+            existing_users = set()
+
+        # Формируем запись
+        user_record = f"{user_id}:{username}"
+
+        # Добавляем нового пользователя если его нет
+        if user_record not in existing_users:
+            with open(USERS_FILE, 'a', encoding='utf-8') as f:
+                f.write(user_record + '\n')
+    except Exception as e:
+        logging.error(f"Error saving user {username}: {e}")
+
+
+def get_all_users():
+    """Возвращает список всех пользователей (user_id)"""
+    try:
+        if os.path.exists(USERS_FILE):
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                users = []
+                for line in f.readlines():
+                    if ':' in line:
+                        user_id = line.strip().split(':')[0]
+                        users.append(user_id)
+                return users
+        return []
+    except Exception as e:
+        logging.error(f"Error reading users: {e}")
+        return []
+
+
+def save_message_log(username, user_message, bot_response):
+    """Сохраняет переписку в sends.txt"""
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(SENDS_FILE, 'a', encoding='utf-8') as f:
+            f.write(f"[{timestamp}] {username}: {user_message}\n")
+            f.write(f"[{timestamp}] Бот: {bot_response}\n")
+            f.write("-" * 50 + "\n")
+    except Exception as e:
+        logging.error(f"Error saving message log: {e}")
+
+
+def get_message_history(limit=10):
+    """Возвращает историю сообщений"""
+    try:
+        if os.path.exists(SENDS_FILE):
+            with open(SENDS_FILE, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                # Каждое сообщение занимает 3 строки
+                start_index = max(0, len(lines) - limit * 3)
+                return lines[start_index:]
+        return []
+    except Exception as e:
+        logging.error(f"Error reading message history: {e}")
+        return []
+
+
 # Создаем нейросеть
 nn = AdvancedNeuralNetwork()
 admin_users = set()
@@ -215,7 +267,7 @@ admin_users = set()
 # Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = """🤖 Привет! Я нейросеть с искусственным интеллектом! Хочю предупредить!
-Внимание при использовании нейросети вы соглашаетесь что мы будем собирать ваши данные из переписок для обучение модели!
+Внимание при использовании нейросети вы соглашаетесь что мы будем собирать ваши данные из переписок для обучение модели! Но также предупреждаем что сбор данных начн1тся только если вы напишете следущее сообщение!
 
 Я умею:
 • Отвечать на вопросы из моей базы знаний
@@ -230,6 +282,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 💡 Просто напиши мне любой вопрос или сообщение, и я постараюсь помочь!
 Удачи в использовании!"""
 
+
+
+
     await update.message.reply_text(welcome_text)
 
 
@@ -239,13 +294,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     username = update.message.from_user.username or f"user_{user_id}"
 
-    # Генерируем интеллектуальный ответ
+    # Сохраняем пользователя
+    save_user(user_id, username)
+
+    # Генерируем ответ
     response = nn.generate_response(user_text, user_id, username)
+
+    # Сохраняем переписку
+    save_message_log(username, user_text, response)
 
     await update.message.reply_text(response)
 
 
-# Команда для предложений по улучшению (вместо /train)
+# Команда для предложений по улучшению
 async def suggest_improvement(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text(
@@ -263,7 +324,6 @@ async def suggest_improvement(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.message.from_user.id
     username = update.message.from_user.username or f"user_{user_id}"
 
-    # Сохраняем предложение
     nn.training_suggestions.append({
         'user_id': user_id,
         'username': username,
@@ -276,6 +336,28 @@ async def suggest_improvement(update: Update, context: ContextTypes.DEFAULT_TYPE
         "Админ рассмотрит его и улучшит мои способности. "
         "Вы помогаете мне становиться умнее! 🚀"
     )
+
+
+# Функция для рассылки сообщений
+async def broadcast_message(context: ContextTypes.DEFAULT_TYPE, message: str):
+    """Отправляет сообщение всем пользователям из users.txt"""
+    users = get_all_users()
+    successful = 0
+    failed = 0
+
+    for user_id in users:
+        try:
+            await context.bot.send_message(
+                chat_id=int(user_id),
+                text=message
+            )
+            successful += 1
+            logging.info(f"Message sent to {user_id}")
+        except Exception as e:
+            logging.error(f"Failed to send message to {user_id}: {e}")
+            failed += 1
+
+    return successful, failed
 
 
 # Админ панель
@@ -293,11 +375,13 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/admin add знание - добавить знание\n"
             "/admin delete знание - удалить знание\n"
             "/admin knowledge - просмотр знаний\n"
-            "/admin train - применить обучение"
+            "/admin train - применить обучение\n"
+            "/admin closed - уведомить о выключении\n"
+            "/admin send - рассылка всем пользователям"
         )
         return
 
-    if context.args[0] == "password":
+    if context.args[0] == "замените на свой пороль":
         admin_users.add(user_id)
         await update.message.reply_text(
             "✅ Доступ предоставлен!\n\n"
@@ -309,6 +393,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/admin delete вопрос - удалить знание\n"
             "/admin knowledge - вся база знаний\n"
             "/admin train категория текст - обучение модели\n"
+            "/admin closed - уведомить всех о выключении\n"
+            "/admin send текст - рассылка всем пользователям\n"
             "Админка была предоставлена по поролю и сохранится до перезапуска бота!"
         )
         return
@@ -319,15 +405,15 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Статистика
     if context.args[0] == "stats":
-        total_messages = len(nn.conversation_history)
-        unique_users = len(set(msg['user_id'] for msg in nn.conversation_history))
+        users_count = len(get_all_users())
         knowledge_size = len(nn.knowledge_base)
         suggestions_count = len(nn.training_suggestions)
+        total_messages = len(nn.conversation_history)
 
         await update.message.reply_text(
             f"📊 Статистика:\n"
-            f"Сообщений: {total_messages}\n"
-            f"Уникальных пользователей: {unique_users}\n"
+            f"Зарегистрированных пользователей: {users_count}\n"
+            f"Всего сообщений: {total_messages}\n"
             f"Знаний в базе: {knowledge_size}\n"
             f"Предложений: {suggestions_count}\n"
             f"Админов онлайн: {len(admin_users)}"
@@ -342,10 +428,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except:
                 pass
 
-        history_text = f"📝 Последние {limit} сообщений:\n\n"
-        for msg in nn.conversation_history[-limit:]:
-            history_text += f"👤 {msg['username']}: {msg['message']}\n"
-            history_text += f"⏰ {msg['timestamp'][:19]}\n\n"
+        history_lines = get_message_history(limit)
+        if history_lines:
+            history_text = f"📝 Последние {limit} сообщений:\n\n"
+            history_text += "".join(history_lines)
+        else:
+            history_text = "📭 История сообщений пуста"
 
         await update.message.reply_text(history_text[:4000])
 
@@ -405,25 +493,42 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             await update.message.reply_text("❌ Ошибка формата: /admin train номер текст")
 
+    # Уведомление о выключении
+    elif context.args[0] == "closed":
+        message = "🔴 Внимание! Бот будет отключен на ночь (сервера отключаются для экономии энергии). Работа возобновится утром. Спасибо за понимание!"
+
+        await update.message.reply_text("🔄 Начинаю рассылку уведомления о выключении...")
+        successful, failed = await broadcast_message(context, message)
+
+        await update.message.reply_text(
+            f"✅ Уведомление о выключении отправлено!\n"
+            f"✅ Успешно: {successful} пользователей\n"
+            f"❌ Не удалось: {failed} пользователей"
+        )
+
+    # Рассылка сообщений
+    elif context.args[0] == "send" and len(context.args) > 1:
+        message_text = ' '.join(context.args[1:])
+
+        await update.message.reply_text("🔄 Начинаю рассылку сообщения...")
+        successful, failed = await broadcast_message(context, message_text)
+
+        await update.message.reply_text(
+            f"✅ Рассылка завершена!\n"
+            f"✅ Успешно: {successful} пользователей\n"
+            f"❌ Не удалось: {failed} пользователей\n"
+            f"📨 Сообщение: {message_text}"
+        )
+
     # Экспорт
     elif context.args[0] == "export":
         nn.save_knowledge()
         await update.message.reply_text("✅ Данные экспортированы в файл!")
 
 
-
-    # Теперь ответы берутся из базы знаний
-    answer = nn.find_answer(user_prompt)
-    if answer:
-        await update.message.reply_text(answer)
-    else:
-        await update.message.reply_text(
-            "Пока не могу ответить на этот запрос. Админ может добавить информацию через админ-панель.")
-
-
 # Основная функция
 def main():
-    TOKEN = "Введите сюда токен своего бота"
+    TOKEN = "введите токен своего бота "
 
     application = Application.builder().token(TOKEN).build()
 
@@ -433,8 +538,10 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("🤖 Умный бот запущен...")
-    print("📚 База знаний: ПУСТА (будет заполняться через админку)")
-    print("💡 Используйте /admin add для обучения бота")
+    print("📚 База знаний загружена")
+    print("👥 Система пользователей активна")
+    print("📝 Логи сохраняются в sends.txt")
+    print("💡 Используйте /admin для управления")
     application.run_polling()
 
 
