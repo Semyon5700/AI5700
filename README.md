@@ -19,6 +19,13 @@ License: GPL v3.0 в LICENSE
 ### Требования
 - Python 3.8+
 - Telegram Bot Token (от [@BotFather](https://t.me/BotFather))
+- и библиотеки
+- logging 
+-numpy
+-json            
+-os
+-datetime
+-telegram 
 ### также можно использовать уже нашего бота в telegram с этой нейросетью вот он https://t.me/AI5700_bot
 
 ### автор
