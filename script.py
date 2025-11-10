@@ -461,7 +461,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if context.args[0] == "password ":
+    if context.args[0] == "Введите сюда пороль для админа":
         admin_users.add(user_id)
         await update.message.reply_text(
             "✅ Доступ предоставлен!\n\n"
@@ -608,7 +608,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Основная функция
 def main():
-    TOKEN = "Вставьте сюда ваш токен"
+    TOKEN = "Введите сюда ваш токен!"
 
     application = Application.builder().token(TOKEN).build()
 
